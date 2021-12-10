@@ -1,18 +1,22 @@
+// Libraries
 import React, { Component } from "react";
 import axios from "axios";
-
 import classnames from "classnames";
 
+// Helpers
 import {
   getTotalInterviews,
   getLeastPopularTimeSlot,
   getMostPopularDay,
   getInterviewsPerDay
 } from "helpers/selectors";
+import { setInterview } from "helpers/reducers";
 
+// Components
 import Loading from "./Loading";
 import Panel from "./Panel";
 
+// Data structure
 const data = [
   {
     id: 1,
@@ -64,12 +68,27 @@ export default class Dashboard extends Component {
         interviewers: interviewers.data
       });
     });
+
+    this.socket = new WebSocket(process.env.REACT_APP_WEBSOCKET_URL);
+    this.socket.onmessage = event => {
+      const data = JSON.parse(event.data);
+
+      if (typeof data === "object" && data.type === "SET_INTERVIEW") {
+        this.setState(previousState =>
+          setInterview(previousState, data.id, data.interview)
+        );
+      }
+    };
   }
 
   componentDidUpdate(previousProps, previousState) {
     if (previousState.focused !== this.state.focused) {
       localStorage.setItem("focused", JSON.stringify(this.state.focused));
     }
+  }
+
+  componentWillUnmount() {
+    this.socket.close();
   }
 
   selectPanel(id) {
